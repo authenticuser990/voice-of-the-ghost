@@ -1,0 +1,486 @@
+// This is your Prisma schema file for Voice of the Ghost (VotG)
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════
+// CORE SCHEMA: Users, Profiles, Posts, Communities, etc.
+// (Using String types instead of Enums for SQLite compatibility)
+// ═══════════════════════════════════════════════════════════
+
+// User Roles: SAGE, HELPSEEKER, BOTH
+// Genders: MALE, FEMALE, NONBINARY, PREFERNOTTOSAY, OTHER
+// Post Categories: MENTAL_HEALTH, FRIENDS, LONELINESS_AND_LEFT_OUT, BROKEN_HEARTED, BULLIED, HARASSED, SELF_HARM, JOY, OTHERS, VENT
+// Emotions: HAPPY, CALM, SAD, DEPRESSED, ANXIOUS, ANGRY, FRUSTRATED, HOPEFUL, NUMB, OVERWHELMED
+// Community Visibility: PUBLIC, PRIVATE
+// Content Rating: SFW, NSFW
+// Community Member Roles: MEMBER, SUB_ADMIN, ADMIN
+// Join Request Status: PENDING, APPROVED, REJECTED
+// Notification Types: POST_COMMENT, POST_LIKE, COMMUNITY_JOIN_REQUEST, COMMUNITY_JOIN_APPROVED, COMMUNITY_JOIN_REJECTED, MENTION, EVERYONE_MENTION, DM_RECEIVED, FOLLOW, SYSTEM_ANNOUNCEMENT
+// Mute Durations: ONE_HOUR, EIGHT_HOURS, ONE_DAY, ONE_WEEK, ONE_MONTH, FOREVER
+// Report Reasons: HARASSMENT, NSFW_MISLABEL, HATE_SPEECH, SPAM, ILLEGAL_CONTENT, THREATS, SELF_HARM, OTHER
+// Report Status: PENDING, DISMISSED, ACTION_TAKEN
+// Ban Types: TEMPORARY, PERMANENT
+
+// ═══════════════════════════════════════════════════════════
+// USER MODEL
+// ═══════════════════════════════════════════════════════════
+model User {
+  id              String            @id @default(cuid())
+  username        String            @unique
+  email           String            @unique
+  passwordHash    String            @map("password_hash")
+  role            String            // SAGE, HELPSEEKER, or BOTH
+  isActive        Boolean           @default(true) @map("is_active")
+  isVerified      Boolean           @default(false) @map("is_verified")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  lastLoginAt     DateTime?         @map("last_login_at")
+
+  // --- Relations ---
+  profile         Profile?
+  posts           Post[]
+  communities     CommunityMember[]
+  joinRequests    CommunityJoinRequest[]
+  messages        Message[]
+  notifications   Notification[]
+  sentDMs         DirectMessage[]   @relation("SentDMs")
+  receivedDMs     DirectMessage[]   @relation("ReceivedDMs")
+  followers       Follow[]          @relation("UserFollowers")
+  following       Follow[]          @relation("UserFollowing")
+  muteSettings    MuteSetting[]
+  createdCommunities Community[]     @relation("CreatedCommunities")
+  comments        PostComment[]
+  reactions       PostReaction[]
+  upvotesGiven    PostUpvote[]      @relation("UserUpvotes")
+  reports         Report[]          @relation("ReportReporter")
+  reviews         Report[]          @relation("ReportReviewer")
+  blocksGiven     Block[]           @relation("UserBlocker")
+  blocksReceived  Block[]           @relation("UserBlocked")
+  bans            Ban[]
+  bansLifted      Ban[]             @relation("BanLifter")
+  bansGiven       Ban[]             @relation("BanAdmin")
+  moderationLogs  ModerationLog[]
+
+  @@map("users")
+}
+
+// ═══════════════════════════════════════════════════════════
+// PROFILE MODEL
+// ═══════════════════════════════════════════════════════════
+model Profile {
+  id              String    @id @default(cuid())
+  userId          String    @unique @map("user_id")
+  displayName     String?   @map("display_name")
+  bio             String?
+  location        String?
+  dateOfBirth     DateTime? @map("date_of_birth")
+  gender          String?   @default("PREFERNOTTOSAY")
+  personality     String    @default("[]") // JSON array of personality traits
+  profileImageUrl String?   @map("profile_image_url")
+  isVisible       Boolean   @default(true) @map("is_visible")
+  
+  // --- Relations ---
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interests       Interest[]
+
+  @@map("profiles")
+}
+
+// ═══════════════════════════════════════════════════════════
+// INTEREST MODEL
+// ═══════════════════════════════════════════════════════════
+model Interest {
+  id          String    @id @default(cuid())
+  profileId   String    @map("profile_id")
+  name        String
+  subInterests String   @default("[]") @map("sub_interests") // JSON array of sub-interests
+
+  // --- Relations ---
+  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("interests")
+}
+
+// ═══════════════════════════════════════════════════════════
+// POST MODEL
+// ═══════════════════════════════════════════════════════════
+model Post {
+  id              String          @id @default(cuid())
+  userId          String          @map("user_id")
+  title           String
+  body            String
+  category        String          // One of the 10 post categories
+  emotion         String          // One of the 10 emotions
+  isVent          Boolean         @default(false) @map("is_vent")
+  isAnonymous     Boolean         @default(false) @map("is_anonymous")
+  isUncensored    Boolean         @default(false) @map("is_uncensored")
+  isDeleted       Boolean         @default(false) @map("is_deleted")
+  upvotes         Int             @default(0)
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  // --- Relations ---
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images          PostImage[]
+  videos          PostVideo[]
+  audioFiles      PostAudio[]
+  documents       PostDocument[]
+  comments        PostComment[]
+  reactions       PostReaction[]
+  upvotesRel      PostUpvote[]      @relation("PostUpvotes")
+
+  @@index([userId, createdAt])
+  @@index([category, createdAt])
+  @@map("posts")
+}
+
+// ─── Post Comments ───
+model PostComment {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  body      String
+  gifUrl    String?  @map("gif_url")
+  isDeleted Boolean  @default(false) @map("is_deleted")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@map("post_comments")
+}
+
+// ─── Post Upvotes ───
+model PostUpvote {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation("PostUpvotes", fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserUpvotes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("post_upvotes")
+}
+
+// ─── Post Reactions (emoji) ───
+model PostReaction {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId, emoji])
+  @@map("post_reactions")
+}
+
+// ═══════════════════════════════════════════════════════════
+// POST MEDIA MODELS
+// ═══════════════════════════════════════════════════════════
+model PostImage {
+  id          String   @id @default(cuid())
+  postId      String   @map("post_id")
+  url         String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_images")
+}
+
+model PostVideo {
+  id          String   @id @default(cuid())
+  postId      String   @map("post_id")
+  url         String
+  thumbnailUrl String? @map("thumbnail_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_videos")
+}
+
+model PostAudio {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  url       String
+  name      String
+  size      Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_audio")
+}
+
+model PostDocument {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  url       String
+  name      String
+  size      Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_documents")
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMMUNITY MODEL
+// ═══════════════════════════════════════════════════════════
+model Community {
+  id              String                @id @default(cuid())
+  name            String                @unique
+  description     String
+  rules           String
+  visibility      String                // PUBLIC or PRIVATE
+  contentRating   String                @map("content_rating") // SFW or NSFW
+  mentionSetting  String                @default("everyone") @map("mention_setting") // everyone or single
+  inviteCode      String?               @unique @map("invite_code")
+  adminId         String                @map("admin_id")
+  isActive        Boolean               @default(true) @map("is_active")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  // --- Relations ---
+  admin           User                  @relation("CreatedCommunities", fields: [adminId], references: [id])
+  members         CommunityMember[]
+  joinRequests    CommunityJoinRequest[]
+  messages        Message[]
+
+  @@map("communities")
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMMUNITY MEMBER MODEL
+// ═══════════════════════════════════════════════════════════
+model CommunityMember {
+  id          String             @id @default(cuid())
+  communityId String             @map("community_id")
+  userId      String             @map("user_id")
+  role        String             // MEMBER, SUB_ADMIN, or ADMIN
+  joinedAt    DateTime           @default(now()) @map("joined_at")
+
+  // --- Relations ---
+  community   Community          @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, userId])
+  @@map("community_members")
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMMUNITY JOIN REQUEST MODEL
+// ═══════════════════════════════════════════════════════════
+model CommunityJoinRequest {
+  id          String             @id @default(cuid())
+  communityId String             @map("community_id")
+  userId      String             @map("user_id")
+  status      String             @default("PENDING") // PENDING, APPROVED, REJECTED
+  requestedAt DateTime           @default(now()) @map("requested_at")
+  respondedAt DateTime?          @map("responded_at")
+
+  // --- Relations ---
+  community   Community          @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, userId])
+  @@map("community_join_requests")
+}
+
+// ═══════════════════════════════════════════════════════════
+// MESSAGE MODEL (Community Chat)
+// ═══════════════════════════════════════════════════════════
+model Message {
+  id              String      @id @default(cuid())
+  communityId     String      @map("community_id")
+  senderId        String      @map("sender_id")
+  content         String
+  fileUrl         String?     @map("file_url")
+  fileType        String?     @map("file_type")
+  replyToId       String?     @map("reply_to_id")
+  isDeleted       Boolean     @default(false) @map("is_deleted")
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  // --- Relations ---
+  community       Community   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  sender          User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo         Message?    @relation("MessageReply", fields: [replyToId], references: [id])
+  replies         Message[]   @relation("MessageReply")
+
+  @@index([communityId, createdAt])
+  @@map("messages")
+}
+
+// ═══════════════════════════════════════════════════════════
+// DIRECT MESSAGE MODEL
+// ═══════════════════════════════════════════════════════════
+model DirectMessage {
+  id              String      @id @default(cuid())
+  senderId        String      @map("sender_id")
+  receiverId      String      @map("receiver_id")
+  content         String
+  fileUrl         String?     @map("file_url")
+  fileType        String?     @map("file_type")
+  isRead          Boolean     @default(false) @map("is_read")
+  readAt          DateTime?   @map("read_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  // --- Relations ---
+  sender          User        @relation("SentDMs", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver        User        @relation("ReceivedDMs", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId, createdAt])
+  @@map("direct_messages")
+}
+
+// ═══════════════════════════════════════════════════════════
+// FOLLOW MODEL
+// ═══════════════════════════════════════════════════════════
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // --- Relations ---
+  follower    User     @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+// ═══════════════════════════════════════════════════════════
+// NOTIFICATION MODEL
+// ═══════════════════════════════════════════════════════════
+model Notification {
+  id              String            @id @default(cuid())
+  userId          String            @map("user_id")
+  type            String            // POST_COMMENT, POST_LIKE, COMMUNITY_JOIN_REQUEST, etc.
+  referenceId     String?           @map("reference_id")
+  message         String
+  isRead          Boolean           @default(false) @map("is_read")
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  // --- Relations ---
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+// ═══════════════════════════════════════════════════════════
+// MUTE SETTINGS MODEL
+// ═══════════════════════════════════════════════════════════
+model MuteSetting {
+  id              String        @id @default(cuid())
+  userId          String        @map("user_id")
+  communityId     String?       @map("community_id") // NULL means global mute
+  muteType        String        @map("mute_type") // 'ALL', 'MENTIONS', 'EVERYONE', 'NONE'
+  duration        String        // ONE_HOUR, EIGHT_HOURS, ONE_DAY, ONE_WEEK, ONE_MONTH, FOREVER
+  expiresAt       DateTime?     @map("expires_at")
+  isActive        Boolean       @default(true) @map("is_active")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  // --- Relations ---
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, communityId])
+  @@map("mute_settings")
+}
+
+// ═══════════════════════════════════════════════════════════
+// REPORT MODEL
+// ═══════════════════════════════════════════════════════════
+model Report {
+  id              String          @id @default(cuid())
+  reporterId      String          @map("reporter_id")
+  contentId       String          @map("content_id")      // post_id, comment_id, or community_id
+  contentType     String          @map("content_type")    // POST, COMMENT, COMMUNITY
+  reason          String          // HARASSMENT, NSFW_MISLABEL, HATE_SPEECH, SPAM, ILLEGAL_CONTENT, THREATS, SELF_HARM, OTHER
+  description     String?         // optional user-provided detail
+  status          String          @default("PENDING")     // PENDING, DISMISSED, ACTION_TAKEN
+  reviewedById    String?         @map("reviewed_by_id")
+  reviewedAt      DateTime?       @map("reviewed_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  reporter        User            @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewer        User?           @relation("ReportReviewer", fields: [reviewedById], references: [id])
+
+  @@index([status, createdAt])
+  @@map("reports")
+}
+
+// ═══════════════════════════════════════════════════════════
+// BLOCK MODEL
+// ═══════════════════════════════════════════════════════════
+model Block {
+  id          String   @id @default(cuid())
+  blockerId   String   @map("blocker_id")
+  blockedId   String   @map("blocked_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  blocker     User     @relation("UserBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked     User     @relation("UserBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@map("blocks")
+}
+
+// ═══════════════════════════════════════════════════════════
+// BAN MODEL
+// ═══════════════════════════════════════════════════════════
+model Ban {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  adminId     String    @map("admin_id")
+  reason      String
+  banType     String    // TEMPORARY, PERMANENT
+  duration    Int?      // in minutes (null for permanent)
+  expiresAt   DateTime? @map("expires_at")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  liftedAt    DateTime? @map("lifted_at")
+  liftedById  String?   @map("lifted_by_id")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  admin       User      @relation("BanAdmin", fields: [adminId], references: [id])
+  liftedBy    User?     @relation("BanLifter", fields: [liftedById], references: [id])
+
+  @@index([userId, isActive])
+  @@map("bans")
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODERATION LOG MODEL
+// ═══════════════════════════════════════════════════════════
+model ModerationLog {
+  id          String   @id @default(cuid())
+  adminId     String   @map("admin_id")
+  action      String   // DELETE_POST, DELETE_COMMENT, BAN_USER, LIFT_BAN, MARK_NSFW, DISMISS_REPORT
+  targetId    String   @map("target_id")    // post_id, comment_id, user_id, report_id
+  targetType  String   @map("target_type")  // POST, COMMENT, USER, REPORT
+  details     String?  // JSON with additional context
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  admin       User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, createdAt])
+  @@map("moderation_logs")
+}

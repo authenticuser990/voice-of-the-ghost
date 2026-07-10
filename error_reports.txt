@@ -1,0 +1,198 @@
+═══════════════════════════════════════════════════════════════
+ERROR REPORT — Voice of the Ghost
+═══════════════════════════════════════════════════════════════
+
+1. "Failed running 'src/index.js'. Waiting for file changes before restarting..."
+───────────────────────────────────────────────────────────────
+What it means:
+   The backend server crashed and stopped running. The --watch
+   mode is waiting for you to save a file to auto-restart.
+
+How to fix:
+   Check the terminal for the actual error message above this
+   line. Usually it's a syntax error or missing import.
+   Fix the code and save, or restart manually:
+     cd backend && npm run dev
+
+
+2. "Error: connect ECONNREFUSED 127.0.0.1:3000"
+───────────────────────────────────────────────────────────────
+What it means:
+   The frontend is trying to talk to the backend at port 3000,
+   but the backend is NOT running. It's like calling someone
+   whose phone is turned off.
+
+How to fix:
+   Start the backend first:
+     cd backend && npm run dev
+
+   Then start the frontend:
+     npm run dev
+
+   Always start BACKEND before FRONTEND.
+
+
+3. "Error: write EPIPE"
+───────────────────────────────────────────────────────────────
+What it means:
+   The frontend tried to send data to the backend, but the
+   connection was already closed. This happens when the backend
+   crashes or restarts.
+
+How to fix:
+   This is a side effect of error #2. Fix the backend first,
+   and this error will go away.
+
+
+4. "ws proxy error"
+───────────────────────────────────────────────────────────────
+What it means:
+   The WebSocket (real-time connection) between frontend and
+   backend failed. This is used for live chat, typing
+   indicators, and real-time updates.
+
+How to fix:
+   Same as #2 — make sure the backend is running. Also check
+   that the socket proxy is configured in vite.config.js:
+     '/socket.io': {
+       target: 'http://localhost:3000',
+       ws: true,
+     }
+
+
+5. "http proxy error: /api/notifications/unread-count"
+───────────────────────────────────────────────────────────────
+What it means:
+   The frontend polls for unread notifications every 15
+   seconds. When the backend is down, this request fails.
+
+How to fix:
+   This is harmless when the backend is restarting. Once the
+   backend is running again, it will recover automatically.
+
+
+═══════════════════════════════════════════════════════════════
+QUICK FIX — Run these commands in order:
+═══════════════════════════════════════════════════════════════
+
+  Terminal 1 (Backend):
+    cd backend && npm run dev
+
+  Terminal 2 (Frontend):
+    npm run dev
+
+  Wait for "🚀 VotG Backend is running" before starting frontend.
+
+═══════════════════════════════════════════════════════════════
+
+6. "Promote to Sub-Admin not working"
+───────────────────────────────────────────────────────────────
+What it means:
+   When clicking the star button to promote a member to
+   Sub-Admin, nothing happens or an error is shown.
+
+How to fix:
+   The frontend was passing member.userId (user's ID) to the
+   API, but the backend expects member.id (community member
+   record ID). Fixed in CommunitySettings.jsx:
+     - handlePromoteMember(member.id)  ← was member.userId
+     - handleDemoteMember(member.id)   ← was member.userId
+     - handleRemoveMember(member.id)   ← was member.userId
+
+═══════════════════════════════════════════════════════════════
+
+7. "Unexpected token 'T', "Too many r..." is not valid JSON"
+───────────────────────────────────────────────────────────────
+What it means:
+   The backend rate limiter returned a plain text error message
+   instead of JSON. The frontend tried to parse it as JSON and
+   failed. This happens when you make too many requests quickly.
+
+How to fix:
+   Added custom JSON message to the rate limiter in index.js:
+     message: { error: 'Too many requests. Please try again later.' }
+
+═══════════════════════════════════════════════════════════════
+
+8. "Transfer Ownership only works for Sub-Admins"
+───────────────────────────────────────────────────────────────
+What it means:
+   Ownership can only be transferred to a Sub-Admin, not any
+   regular member. The UI now filters to show only Sub-Admins
+   in the transfer list.
+
+How to fix:
+   - Frontend: Filter shows only SUB_ADMIN members
+   - Backend: Added validation to reject non-Sub-Admin targets
+   - UI: Shows professional message if no Sub-Admins available:
+     "No Sub-Admins Available. Ownership can only be transferred
+      to a Sub-Admin. Please promote a member to Sub-Admin
+      before transferring ownership."
+
+═══════════════════════════════════════════════════════════════
+
+9. "Admin actions need confirmation popups"
+───────────────────────────────────────────────────────────────
+What it means:
+   Leave Community, Transfer Ownership, and Delete Community
+   actions now show professional confirmation modals instead
+   of browser's default confirm() dialog.
+
+How to fix:
+   - Added showDeleteModal and showLeaveModal state variables
+   - Created professional confirmation modals with:
+     * Icon (delete/leave themed)
+     * Clear warning message
+     * Community preview card
+     * Cancel and Confirm buttons
+    - Transfer Ownership already had its own modal
+    - Added CSS for .confirm-modal-content, .confirm-modal-icon,
+      .confirm-modal-title, .confirm-modal-desc, etc.
+
+═══════════════════════════════════════════════════════════════
+
+10. "ws proxy error: write EPIPE"
+───────────────────────────────────────────────────────────────
+What it means:
+   The WebSocket proxy encounters an error when trying to write
+   to a closed connection. This happens when the backend
+   restarts or when connections are interrupted. The error is
+   harmless but clutters the console.
+
+How to fix:
+   - Added error handler to vite.config.js WebSocket proxy to
+     suppress EPIPE errors during normal reconnection
+   - Added pingTimeout (60s) and pingInterval (25s) to
+     socket.io server to handle stale connections better
+   - These errors will no longer appear in the console
+
+═══════════════════════════════════════════════════════════════
+
+11. "Admin actions restructured - 3 separate buttons"
+───────────────────────────────────────────────────────────────
+What it means:
+   Admin now has 3 separate buttons with different behaviors:
+   
+   1. Transfer Ownership:
+      - Transfers admin role to a Sub-Admin
+      - Admin becomes Sub-Admin (does NOT leave)
+      - New backend route: POST /api/communities/:id/transfer
+   
+   2. Delete Community:
+      - Deletes community immediately
+      - No transfer required
+      - Shows confirmation modal
+   
+   3. Leave Community:
+      - For admins: Shows message to transfer ownership first
+      - For regular members: Leaves community immediately
+      - Admin cannot leave directly - must transfer first
+
+How to fix:
+   - Added TransferIcon component
+   - Created new /transfer backend route
+   - Updated /leave route to reject admin requests
+   - Leave modal shows different message for admins vs members
+   - Transfer modal only shows Sub-Admins in the list
+
+═══════════════════════════════════════════════════════════════

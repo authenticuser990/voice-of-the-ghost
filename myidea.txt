@@ -1,0 +1,81 @@
+Voice of the Ghost
+
+This a platform where you can Post what you’re going through and I am bringing an Opportunity for those who want to help in talking with Left out people here and there is a communities you can join and it gives the option for to access the uncensored which is oriented to Psychological Problems and Addiction which does not promotes like Killing and Violence this is meant only for people who are going through certain problems for eg Porn Addiction or Suicidal Thoughts and etc etc..... 
+
+Alright so let’s get to section to section
+
+Profile 
+Username must be unique and a user chooses a username with no redundancy and there must be 2 roles here
+Sage: A Good Listener and Give Advice to the Certain Problems and in Sage role you can Casually Talk and Make Friends and also you can take an Accountability to Check on the Person
+Help Seeker: This Role here the User can Ask Help from Sage and Help Seeker can talk with Another Help Seeker
+There must be interest and personality and in interest there must be sub interest like music in music genre and favorite artist this is an example 
+
+Post:
+User can create posts and delete posts while creating post user can write their issues as long as they want with the following title and he should choose category 
+Category:
+Mental Health
+Friends
+Loneliness and Left out
+Broken Hearted
+Bullied
+Harassed
+Self Harm
+Joy
+Others
+Vent
+
+Emotions with emoji like happy calm or sad or depressed
+If the user chooses the Vent Tag it will take you directly to the vent section
+Post Anonymously option must be there
+After posting the user can delete or edit the post anytime.
+
+Communities Section:
+Users can search and create community and join community there will be no limits and in community section a community can be public and private and public uncensored and private uncensored in private community users will be invited or added by the admin only or community creator which we will call Admin in private community users who will be joining they will be approved by the admin.
+Community Creating Procedure:
+Name and Description and Rules must be written and user can put 2 tags one is public or private and SFW or NSFW
+In NSFW there will be only those content which will be uncensored and users can post anything there will be no censorship.
+The Text will not be hashed with certain words like suicide or self harm 
+There will be Sub Admin which will approve and add users only for private community
+
+Community Joining:
+A Public and a Private Community will be there if the community is Private there will be a new page saying this community is Private with a request to join button and the message in the bottom please join the community and you will be approved by the admin if the admin approved it there will be a notification popping up saying Admin Approved your request and if the admin did not approved it there will be a message sent to the user saying “Sorry your request for joining $community_name is not approved”
+So in community a user can mention anyone using ‘@’ symbol also to mention everyone a user can use @everyone to ping everyone the everyone privilege can be controlled by admin but putting an option user mention only one person only admin can use @everyone and @user_name but users may ping only one username using @user_name or can ping one user or ping everyone using @everyone if admin gives the privileges and users can control community notifications:
+Mute All Notification
+Mute only Mentions
+Mute @everyone notifications
+Get only mentions Notifications
+ For muting the notifications there will be a duration:
+1 hour
+8 hour
+1 day
+1 week
+1 month
+Forever
+Users will get the get notified only mentions
+Get all notifications
+
+In chat section users and admin can upload files like images (all formats), videos (mp4 only) and pdf, docx, .md
+Home Feed 
+There will be few sections:
+Posts by text and images and Videos Section 
+Reels Only Section
+My Followers Section
+Vent Section
+A Button will be made on the top
+On Bottom
+Dms
+Communities
+ Settings
+
+Settings Section
+Theme
+Manage Account add and remove account from the list
+Delete Account user have to enter code ‘delete’ in order to delete it and it must show warning like this will remove your entire data
+Show Uncensored (if you toggle it on it show the uncensored post and uncensored community)
+Notifications
+(Show Post Notifications
+Show Community Notifications
+Show Following Post Notifications)
+
+About App
+Privacy Policy
