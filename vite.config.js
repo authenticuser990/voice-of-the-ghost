@@ -2,53 +2,52 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    ...(process.env.NODE_ENV === 'production' ? [VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons.svg'],
-      manifest: {
-        name: 'Voice of the Ghost',
-        short_name: 'VotG',
-        description: 'A judgment-free platform for emotional support and community.',
-        theme_color: '#aa3bff',
-        background_color: '#ffffff',
-        display: 'standalone',
-        orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          {
-            src: '/favicon.svg',
-            sizes: '192x192',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
-          },
-          {
-            src: '/favicon.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
+  plugins: [react(), ...(process.env.NODE_ENV === 'production' ? [VitePWA({
+    registerType: 'autoUpdate',
+    includeAssets: ['favicon.svg', 'icons.svg'],
+    manifest: {
+      name: 'Voice of the Ghost',
+      short_name: 'VotG',
+      description: 'A judgment-free platform for emotional support and community.',
+      theme_color: '#aa3bff',
+      background_color: '#ffffff',
+      display: 'standalone',
+      orientation: 'portrait',
+      scope: '/',
+      start_url: '/',
+      icons: [
+        {
+          src: '/favicon.svg',
+          sizes: '192x192',
+          type: 'image/svg+xml',
+          purpose: 'any maskable'
+        },
+        {
+          src: '/favicon.svg',
+          sizes: '512x512',
+          type: 'image/svg+xml',
+          purpose: 'any maskable'
+        }
+      ]
+    },
+    workbox: {
+      globPatterns: ['**/*.{js,css,html,svg,png,ico,json}'],
+      runtimeCaching: [
+        {
+          urlPattern: /^\/api\//,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'api-cache',
+            expiration: { maxEntries: 50, maxAgeSeconds: 300 }
           }
-        ]
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,json}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^\/api\//,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 300 }
-            }
-          }
-        ]
-      }
-    })] : []),
-  ],
+        }
+      ]
+    }
+  })] : []), cloudflare()],
   server: {
     host: true,
     proxy: {
