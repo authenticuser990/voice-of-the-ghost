@@ -8,7 +8,7 @@ const ArrowLeft = () => (
   <svg viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
 )
 
-export default function ProfilePage({ onBack, username, onViewPost }) {
+export default function ProfilePage({ onBack, username, onViewPost, onViewProfile }) {
   const { user, updateUser } = useAuth()
   const [profileData, setProfileData] = useState(null)
   const [myPosts, setMyPosts] = useState([])
@@ -17,6 +17,10 @@ export default function ProfilePage({ onBack, username, onViewPost }) {
   const [saving, setSaving] = useState(false)
   const [followState, setFollowState] = useState(null)
   const [followLoading, setFollowLoading] = useState(false)
+  const [loadError, setLoadError] = useState(null)
+  const [followers, setFollowers] = useState([])
+  const [following, setFollowing] = useState([])
+  const [showList, setShowList] = useState(null)
 
   const isOwnProfile = !username || username === user?.username
 
@@ -24,6 +28,7 @@ export default function ProfilePage({ onBack, username, onViewPost }) {
     try {
       const data = await profiles.getMe()
       setProfileData(data)
+      setLoadError(null)
       const p = data.profile || {}
       setForm({
         displayName: p.displayName || '',
@@ -35,13 +40,16 @@ export default function ProfilePage({ onBack, username, onViewPost }) {
       })
     } catch (err) {
       console.error('Load profile error:', err)
+      setLoadError(`Failed to load profile: ${err.message}`)
     }
   }, [])
 
   const loadUserProfile = useCallback(async () => {
+    if (!username) return
     try {
       const data = await users.getByUsername(username)
       setProfileData(data)
+      setLoadError(null)
       setForm({
         displayName: data.profile?.displayName || '',
         bio: data.profile?.bio || '',
@@ -52,51 +60,68 @@ export default function ProfilePage({ onBack, username, onViewPost }) {
       })
     } catch (err) {
       console.error('Load user profile error:', err)
+      setLoadError(`Failed to load profile: ${err.message}`)
     }
   }, [username])
 
-  const checkFollowStatus = useCallback(async () => {
+  const loadFollowData = useCallback(async (targetUsername) => {
+    if (!targetUsername) return
     try {
+      const [fList, fwList] = await Promise.all([
+        users.getFollowers(targetUsername),
+        users.getFollowing(targetUsername),
+      ])
+      setFollowers(fList)
+      setFollowing(fwList)
+    } catch (err) {
+      console.error('Load followers/following error:', err)
+    }
+    try {
+      const fStatus = await users.getFollowStatus(targetUsername)
+      setFollowState(fStatus.isFollowing ? 'unfollow' : 'follow')
+    } catch {
       setFollowState('follow')
-    } catch {}
+    }
   }, [])
 
   const loadMyPosts = useCallback(async () => {
+    if (!user?.id) return
     try {
-      const data = await postsApi.getAll({ limit: 50 })
-      setMyPosts(data.filter((p) => p.userId === user?.id && !p.isDeleted))
+      const data = await postsApi.getAll({ limit: 50, userId: user.id })
+      setMyPosts(data.filter((p) => !p.isDeleted))
     } catch (err) {
       console.error('Load posts error:', err)
     }
   }, [user?.id])
 
-  const loadUserPosts = useCallback(async () => {
+  const loadUserPosts = useCallback(async (targetUserId) => {
+    if (!targetUserId) return
     try {
-      const data = await postsApi.getAll({ limit: 50 })
-      const targetId = profileData?.id
-      if (targetId) {
-        setMyPosts(data.filter((p) => p.userId === targetId && !p.isDeleted))
-      }
+      const data = await postsApi.getAll({ limit: 50, userId: targetUserId })
+      setMyPosts(data.filter((p) => !p.isDeleted))
     } catch (err) {
       console.error('Load user posts error:', err)
     }
-  }, [profileData?.id])
+  }, [])
 
+  // Load profile on mount or when username/isOwnProfile/user changes
   useEffect(() => {
     if (isOwnProfile) {
       loadMyProfile()
-      loadMyPosts()
+      if (user?.id) loadMyPosts()
+      loadFollowData(user?.username)
     } else {
       loadUserProfile()
-      checkFollowStatus()
+      loadFollowData(username)
     }
-  }, [isOwnProfile, username, loadMyProfile, loadMyPosts, loadUserProfile, checkFollowStatus])
+  }, [isOwnProfile, username, user?.id, user?.username])
 
+  // Load user posts once profileData is available
   useEffect(() => {
     if (profileData && !isOwnProfile) {
-      loadUserPosts()
+      loadUserPosts(profileData.id)
     }
-  }, [profileData, isOwnProfile, loadUserPosts])
+  }, [profileData, isOwnProfile])
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -133,6 +158,33 @@ export default function ProfilePage({ onBack, username, onViewPost }) {
     } finally {
       setFollowLoading(false)
     }
+  }
+
+  const handleRemoveFollower = async (targetUsername) => {
+    try {
+      await users.removeFollower(targetUsername)
+      setFollowers((prev) => prev.filter((u) => u.username !== targetUsername))
+    } catch (err) {
+      console.error('Remove follower error:', err)
+    }
+  }
+
+  if (loadError) {
+    return (
+      <div className="loading-screen">
+        <p>{loadError}</p>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button className="auth-submit" onClick={() => { setLoadError(null); window.location.reload() }}>
+            Retry
+          </button>
+          {loadError.includes('Session expired') && (
+            <button className="auth-submit secondary" onClick={() => { localStorage.removeItem('votg_token'); localStorage.removeItem('votg_user'); window.location.reload() }}>
+              Log in again
+            </button>
+          )}
+        </div>
+      </div>
+    )
   }
 
   if (!profileData) return <div className="loading-screen">Loading...</div>
@@ -227,6 +279,79 @@ export default function ProfilePage({ onBack, username, onViewPost }) {
               ))}
             </div>
           )}
+
+          <div className="profile-stats">
+            <button className="stat-btn" onClick={() => setShowList('followers')}>
+              <strong>{followers.length}</strong> Followers
+            </button>
+            <button className="stat-btn" onClick={() => setShowList('following')}>
+              <strong>{following.length}</strong> Following
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showList && (
+        <div className="modal-overlay" onClick={() => setShowList(null)}>
+          <div className="modal-card follow-list-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{showList === 'followers' ? 'Followers' : 'Following'}</h3>
+              <button className="modal-close" onClick={() => setShowList(null)}>✕</button>
+            </div>
+            <div className="follow-list">
+              {(showList === 'followers' ? followers : following).length === 0 ? (
+                <p className="placeholder-text">No {showList} yet.</p>
+              ) : (
+                (showList === 'followers' ? followers : following).map((u) => (
+                  <div key={u.id} className="follow-list-item">
+                    <a
+                      className="follow-list-user"
+                      href={`/profile/${u.username}`}
+                      onClick={(e) => {
+                        if (!e.ctrlKey && !e.metaKey && e.button === 0) {
+                          e.preventDefault()
+                          setShowList(null)
+                          onViewProfile?.(u.username)
+                        }
+                      }}
+                    >
+                      <div className="follow-list-avatar">
+                        {u.username[0].toUpperCase()}
+                      </div>
+                      <div className="follow-list-info">
+                        <strong>@{u.username}</strong>
+                        <span className="role-badge-small" data-role={u.role}>
+                          {u.role === 'SAGE' ? 'Sage' : u.role === 'HELPSEEKER' ? 'Help Seeker' : 'Both'}
+                        </span>
+                      </div>
+                    </a>
+                    {isOwnProfile && showList === 'followers' && (
+                      <button className="follow-action-btn remove" onClick={() => handleRemoveFollower(u.username)}>
+                        Remove
+                      </button>
+                    )}
+                    {isOwnProfile && showList === 'following' && (
+                      <button
+                        className="follow-action-btn unfollow"
+                        onClick={async () => {
+                          try {
+                            const result = await users.follow(u.username)
+                            if (result.message === 'Unfollowed successfully') {
+                              setFollowing((prev) => prev.filter((x) => x.username !== u.username))
+                            }
+                          } catch (err) {
+                            console.error('Unfollow error:', err)
+                          }
+                        }}
+                      >
+                        Unfollow
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
 

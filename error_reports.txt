@@ -193,6 +193,106 @@ How to fix:
    - Created new /transfer backend route
    - Updated /leave route to reject admin requests
    - Leave modal shows different message for admins vs members
-   - Transfer modal only shows Sub-Admins in the list
+    - Transfer modal only shows Sub-Admins in the list
+
+═══════════════════════════════════════════════════════════════
+
+12. "Failed to join community"
+───────────────────────────────────────────────────────────────
+What it means:
+   Usually happens after a database reset. Your JWT token
+   references user IDs that no longer exist in the database.
+
+How to fix:
+   Log out and log back in. This generates a fresh token
+   with the correct user ID from the new database.
+
+   Also added a user-existence check in the auth middleware
+   so you'll now see: "Session expired. Please log in again."
+   instead of a generic "Failed to join community".
+
+═══════════════════════════════════════════════════════════════
+
+13. "Profile page stuck on Loading... when clicking Profile"
+───────────────────────────────────────────────────────────────
+What it means:
+   When you tap the Profile button (or click someone's username),
+   the page shows "Loading..." and never shows the actual profile.
+   Three bugs caused this:
+
+Bug A - Re-render loop:
+   The profile page had a useEffect that depended on a function
+   (loadMyPosts). That function got recreated every time your
+   user data changed, which triggered the effect again, which
+   called loadMyPosts again, in an endless loop. Eventually the
+   browser gets confused and the profile never finishes loading.
+
+   Fixed in src/pages/ProfilePage.jsx:
+     - Removed loadMyPosts from the useEffect's dependency list
+     - Now it only watches isOwnProfile and username (simple values)
+
+Bug B - Fetching every single post:
+   When loading your posts, the code asked for ALL 50 posts from
+   the server (with all comments, reactions, images, videos —
+   a massive chunk of data), then filtered for your user ID on
+   the frontend. This is like downloading the whole library to
+   find one book. Slow and can timeout.
+
+   Fixed in 2 files:
+     - backend/src/routes/posts.js: Added ?userId= filter so
+       the database only returns that user's posts
+     - src/pages/ProfilePage.jsx: Now passes userId to the API
+
+Bug C - No error fallback:
+   If the profile API failed (expired token, server restart, etc.),
+   the error was silently swallowed and the page stayed on
+   "Loading..." forever with no way to recover.
+
+Fixed in src/pages/ProfilePage.jsx:
+      - Added a "Failed to load profile. Please try again." message
+      - Added a Retry button that reloads the page
+
+═══════════════════════════════════════════════════════════════
+
+14. "Request failed (502) / ECONNREFUSED — Backend unreachable"
+───────────────────────────────────────────────────────────────
+What it means:
+   All API calls fail with 502 Bad Gateway or ECONNREFUSED.
+   The frontend (Vite) tried to forward requests to the backend
+   at port 3000, but the backend was not running or crashed.
+
+   The most common cause: Node.js --watch mode restarts the
+   backend when files change, but the old process still holds
+   port 3000, so the new process crashes immediately with
+   "EADDRINUSE: address already in use".
+
+   After the crash, --watch keeps retrying but the port is still
+   blocked, so the backend stays down. Meanwhile the frontend
+   keeps trying API calls and spams ECONNREFUSED errors.
+
+How to fix:
+   1. Kill the stuck process on port 3000:
+        PowerShell: Stop-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess -Force
+        Or just restart your computer
+
+   2. Start the backend separately:
+        cd backend && node src/index.js
+      (Use "node src/index.js" without --watch to avoid
+       the auto-restart crash problem)
+
+   3. In another terminal, start the frontend:
+        npm run dev
+
+   Fixed in backend/src/index.js:
+     - Added uncaughtException + unhandledRejection handlers
+       so crashes are logged properly instead of silently dying
+     - Added EADDRINUSE retry logic — if port 3000 is busy,
+       it waits 2 seconds and tries again (3 times) instead of
+       crashing immediately
+
+   Fixed in vite.config.js:
+     - Added error handler to /api proxy to suppress noisy
+       ECONNREFUSED messages in the terminal when the backend
+       is temporarily down
 
 ═══════════════════════════════════════════════════════════════

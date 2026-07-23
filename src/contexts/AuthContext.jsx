@@ -22,11 +22,16 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }, [])
 
+  const notifyTokenChange = () => {
+    window.dispatchEvent(new Event('votg_token_changed'))
+  }
+
   const login = async (credentials) => {
     const data = await auth.login(credentials)
     localStorage.setItem('votg_token', data.token)
     localStorage.setItem('votg_user', JSON.stringify(data.user))
     setUser(data.user)
+    notifyTokenChange()
     return data
   }
 
@@ -35,6 +40,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('votg_token', data.token)
     localStorage.setItem('votg_user', JSON.stringify(data.user))
     setUser(data.user)
+    notifyTokenChange()
     return data
   }
 
@@ -50,6 +56,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('votg_token')
     localStorage.removeItem('votg_user')
     setUser(null)
+    notifyTokenChange()
   }
 
   return (

@@ -59,6 +59,7 @@ export default function Communities({ onBack, onEnterCommunity }) {
   })
   const [error, setError] = useState('')
   const [joinStatus, setJoinStatus] = useState({})
+  const [joinError, setJoinError] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -124,13 +125,15 @@ export default function Communities({ onBack, onEnterCommunity }) {
 
   const handleJoin = async (id) => {
     setJoinStatus((prev) => ({ ...prev, [id]: 'joining' }))
+    setJoinError('')
     try {
       const res = await communities.join(id)
       setJoinStatus((prev) => ({ ...prev, [id]: res.message || 'Joined!' }))
       loadCommunities()
     } catch (err) {
       setJoinStatus((prev) => ({ ...prev, [id]: 'error' }))
-      console.error('Join error:', err)
+      setJoinError(err.message || 'Failed to join community')
+      setTimeout(() => setJoinError(''), 5000)
     }
   }
 
@@ -308,6 +311,12 @@ export default function Communities({ onBack, onEnterCommunity }) {
               {cat.label}
             </button>
           ))}
+        </div>
+      )}
+
+      {joinError && (
+        <div className="join-error-banner">
+          {joinError}
         </div>
       )}
 

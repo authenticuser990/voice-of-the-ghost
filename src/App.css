@@ -373,6 +373,13 @@
   transform: translateY(0);
 }
 
+.auth-submit.secondary {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
 .auth-submit:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -2135,6 +2142,18 @@
   background: var(--bg-surface);
 }
 
+.chat-error-banner {
+  margin: var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  background: #fde8e8;
+  border: 1px solid #f5a5a5;
+  border-radius: var(--radius-md);
+  color: #b91c1c;
+  font-size: 0.875rem;
+  text-align: center;
+  animation: fadeIn 0.2s ease;
+}
+
 .messages-area {
   flex: 1;
   overflow-y: auto;
@@ -3041,6 +3060,19 @@
   background: var(--gradient-brand);
   color: white;
   border-color: transparent;
+}
+
+/* Join Error Banner */
+.join-error-banner {
+  margin: var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  background: #fde8e8;
+  border: 1px solid #f5a5a5;
+  border-radius: var(--radius-md);
+  color: #b91c1c;
+  font-size: 0.875rem;
+  text-align: center;
+  animation: fadeIn 0.2s ease;
 }
 
 /* Communities List */
@@ -4136,6 +4168,138 @@
   border-color: var(--rose-500);
 }
 
+/* ─── Profile Stats (Followers / Following) ─── */
+.profile-stats {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+  justify-content: center;
+}
+
+.stat-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font: 400 var(--text-sm)/1.4 var(--sans);
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.stat-btn:hover {
+  background: var(--bg-secondary);
+}
+
+.stat-btn strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ─── Follow List Modal ─── */
+.follow-list-modal {
+  max-width: 360px;
+  width: 90%;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.follow-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) 0;
+}
+
+.follow-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-right: var(--space-3);
+}
+
+.follow-list-item:hover {
+  background: var(--bg-secondary);
+}
+
+a.follow-list-user,
+button.follow-list-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-4);
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  transition: background var(--transition-fast);
+}
+
+.follow-list-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.follow-list-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.follow-list-info strong {
+  font-size: var(--text-sm);
+}
+
+.role-badge-small {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.follow-action-btn {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  font: 500 12px/1.3 var(--sans);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.follow-action-btn.remove {
+  background: none;
+  border: 1px solid var(--rose-300);
+  color: var(--rose-500);
+}
+
+.follow-action-btn.remove:hover {
+  background: var(--rose-50);
+  border-color: var(--rose-500);
+}
+
+.follow-action-btn.unfollow {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #fff;
+}
+
+.follow-action-btn.unfollow:hover {
+  background: var(--rose-500);
+  border-color: var(--rose-500);
+}
+
 /* ══════════════════════════════════════════════════════════════
    CRISIS BANNER
    ══════════════════════════════════════════════════════════════ */
@@ -4429,6 +4593,16 @@
 .search-result-meta {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
+}
+
+.search-result-stats {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin: 1px 0;
+}
+
+.stat-dot {
+  margin: 0 4px;
 }
 
 .user-avatar-sm {

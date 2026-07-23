@@ -8,10 +8,12 @@
     "dev:frontend": "vite",
     "dev:backend": "cd backend && node --watch src/index.js",
     "build": "vite build",
+    "start": "cd backend && node src/index.js",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "ngrok": "^5.0.0-beta.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-markdown": "^10.1.0",

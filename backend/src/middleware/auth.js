@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken'
+import prisma from '../utils/prisma.js'
 
 // JWT Authentication Middleware
 export const authenticate = async (req, res, next) => {
@@ -10,12 +11,21 @@ export const authenticate = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    
+
+    // Verify user still exists in database
+    const user = await prisma.user.findUnique({ where: { id: decoded.userId } })
+    if (!user) {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' })
+    }
+
     // Attach user info to request
     req.user = decoded
-    
+
     next()
   } catch (_error) {
+    if (_error.name === 'JsonWebTokenError' || _error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' })
+    }
     console.error(_error)
     res.status(403).json({ error: 'Invalid or expired token' })
   }

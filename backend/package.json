@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Backend API for Voice of the Ghost (VotG)",
   "main": "src/index.js",
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.js",

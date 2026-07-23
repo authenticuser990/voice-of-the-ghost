@@ -23,6 +23,11 @@ async function request(endpoint, options = {}) {
   }
 
   if (!res.ok) {
+    if (res.status === 401 && data?.error?.includes('Session expired')) {
+      localStorage.removeItem('votg_token')
+      localStorage.removeItem('votg_user')
+      window.location.reload()
+    }
     throw new Error(data?.error || `Request failed (${res.status})`)
   }
 
@@ -39,6 +44,10 @@ export const users = {
   getAll: () => request('/users'),
   getByUsername: (username) => request(`/users/${username}`),
   follow: (username) => request(`/users/${username}/follow`, { method: 'POST' }),
+  getFollowers: (username) => request(`/users/${username}/followers`),
+  getFollowing: (username) => request(`/users/${username}/following`),
+  getFollowStatus: (username) => request(`/users/${username}/follow-status`),
+  removeFollower: (username) => request(`/users/${username}/remove-follower`, { method: 'POST' }),
 }
 
 export const posts = {

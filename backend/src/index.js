@@ -4,14 +4,21 @@ import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import dotenv from 'dotenv'
 import http from 'http'
-
-// Load environment variables
+import { networkInterfaces } from 'os'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 dotenv.config({ path: join(__dirname, '../.env') })
+
+// Catch unhandled errors so --watch doesn't crash silently
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err.message)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason?.message || reason)
+})
 
 // Validate JWT_SECRET is set
 if (!process.env.JWT_SECRET) {
@@ -47,10 +54,10 @@ app.use('/uploads', express.static(join(__dirname, '../uploads')))
 app.use(helmet())
 app.use(cors())
 
-// General rate limiting (15 minutes window, max 100 requests per IP)
+// General rate limiting (1 minute window, max 60 requests per IP)
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 60 * 1000,
+  max: 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Please try again later.' },
@@ -95,9 +102,18 @@ app.use('/api/reports', reportRoutes)
 app.use('/api/moderation', moderationRoutes)
 app.use('/api/blocks', blockRoutes)
 
+// Serve built frontend in production
+const distPath = join(__dirname, '../../dist')
+app.use(express.static(distPath))
+
 // Catch-all for undefined API routes
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'API endpoint not found' })
+})
+
+// SPA fallback — serve index.html for any non-API route
+app.get('*', (req, res) => {
+  res.sendFile(join(distPath, 'index.html'))
 })
 
 // Global Error Handler
@@ -110,9 +126,37 @@ app.use((err, req, res, _next) => {
 })
 
 // Start Server with Socket.io
-server.listen(PORT, () => {
-  console.log(`🚀 VotG Backend is running at http://localhost:${PORT}`)
-})
+function startServer(port, retries = 3) {
+  server.listen(port)
+    .on('error', (err) => {
+      if (err.code === 'EADDRINUSE' && retries > 0) {
+        console.log(`⚠️  Port ${port} in use, retrying in 2s... (${retries} left)`)
+        setTimeout(() => {
+          server.close()
+          startServer(port, retries - 1)
+        }, 2000)
+      } else {
+        console.error('❌ Server error:', err.message)
+        process.exit(1)
+      }
+    })
+    .on('listening', () => {
+      const nets = networkInterfaces()
+      let networkUrl = ''
+      for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+          if (net.family === 'IPv4' && !net.internal) {
+            networkUrl = `http://${net.address}:${port}`
+            break
+          }
+        }
+        if (networkUrl) break
+      }
+      console.log(`🚀 VotG Backend is running at http://localhost:${port}`)
+      if (networkUrl) console.log(`   Network:     ${networkUrl}`)
+    })
+}
+startServer(PORT)
 
 // Attach Socket.io and store on app for route access
 const io = setupSocket(server)

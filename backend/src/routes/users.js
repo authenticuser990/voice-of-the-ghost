@@ -125,4 +125,109 @@ router.post('/:username/follow', authenticate, async (req, res) => {
   }
 })
 
+// Get followers of a user
+router.get('/:username/followers', async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { username: req.params.username },
+      select: { id: true }
+    })
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    const followers = await prisma.follow.findMany({
+      where: { followingId: user.id },
+      include: {
+        follower: {
+          select: { id: true, username: true, role: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    res.json(followers.map(f => f.follower))
+  } catch (error) {
+    console.error('Get followers error:', error)
+    res.status(500).json({ error: 'Failed to fetch followers' })
+  }
+})
+
+// Get who a user follows
+router.get('/:username/following', async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { username: req.params.username },
+      select: { id: true }
+    })
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    const following = await prisma.follow.findMany({
+      where: { followerId: user.id },
+      include: {
+        following: {
+          select: { id: true, username: true, role: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    res.json(following.map(f => f.following))
+  } catch (error) {
+    console.error('Get following error:', error)
+    res.status(500).json({ error: 'Failed to fetch following' })
+  }
+})
+
+// Check if current user follows this user
+router.get('/:username/follow-status', authenticate, async (req, res) => {
+  try {
+    const targetUser = await prisma.user.findUnique({
+      where: { username: req.params.username },
+      select: { id: true }
+    })
+    if (!targetUser) return res.status(404).json({ error: 'User not found' })
+
+    const existingFollow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: req.user.userId,
+          followingId: targetUser.id
+        }
+      }
+    })
+
+    res.json({ isFollowing: !!existingFollow })
+  } catch (error) {
+    console.error('Follow status error:', error)
+    res.status(500).json({ error: 'Failed to check follow status' })
+  }
+})
+
+// Remove a follower (current user removes :username from their followers)
+router.post('/:username/remove-follower', authenticate, async (req, res) => {
+  try {
+    const targetUser = await prisma.user.findUnique({
+      where: { username: req.params.username },
+      select: { id: true }
+    })
+    if (!targetUser) return res.status(404).json({ error: 'User not found' })
+
+    // Find the follow record where targetUser follows the current user
+    const follow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: targetUser.id,
+          followingId: req.user.userId
+        }
+      }
+    })
+    if (!follow) return res.status(404).json({ error: 'User is not following you' })
+
+    await prisma.follow.delete({ where: { id: follow.id } })
+    res.json({ message: 'Follower removed successfully' })
+  } catch (error) {
+    console.error('Remove follower error:', error)
+    res.status(500).json({ error: 'Failed to remove follower' })
+  }
+})
+
 export default router

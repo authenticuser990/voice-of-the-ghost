@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   plugins: [
     react(),
-    VitePWA({
+    ...(process.env.NODE_ENV === 'production' ? [VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
@@ -47,23 +47,25 @@ export default defineConfig({
           }
         ]
       }
-    })
+    })] : []),
   ],
   server: {
+    host: true,
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         proxyTimeout: 600000,
         timeout: 600000,
+        configure: (proxy) => {
+          proxy.on('error', () => {})
+        },
       },
       '/socket.io': {
         target: 'http://localhost:3000',
         ws: true,
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            // Suppress EPIPE errors - these happen during normal reconnection
-          })
+        configure: (proxy) => {
+          proxy.on('error', () => {})
           proxy.on('proxyReqWs', (proxyReq, req) => {
             // Set proper headers for WebSocket upgrade
           })

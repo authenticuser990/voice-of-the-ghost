@@ -244,6 +244,9 @@ router.post('/:id/join', authenticate, async (req, res) => {
     if (error.code === 'P2002') {
       return res.status(409).json({ error: 'Already a member' })
     }
+    if (error.code === 'P2003') {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' })
+    }
     res.status(500).json({ error: 'Failed to join community' })
   }
 })

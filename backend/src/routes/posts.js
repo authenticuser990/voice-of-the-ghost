@@ -127,6 +127,7 @@ router.get('/', async (req, res) => {
       category, 
       emotion, 
       isVent, 
+      userId,
       limit = 20, 
       offset = 0,
       showUncensored = false,
@@ -138,6 +139,7 @@ router.get('/', async (req, res) => {
       ...(category && { category }),
       ...(emotion && { emotion }),
       ...(isVent !== undefined && { isVent: isVent === 'true' }),
+      ...(userId && { userId }),
     }
 
     let currentUser = null

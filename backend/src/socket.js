@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET
 export function setupSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+      origin: process.env.CORS_ORIGIN || true,
       methods: ['GET', 'POST'],
     },
     pingTimeout: 60000,

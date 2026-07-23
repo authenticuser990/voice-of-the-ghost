@@ -38,6 +38,7 @@ export default function CommunityChat({ communityId, onBack }) {
   const [mentionQuery, setMentionQuery] = useState(null)
   const [mentionIndex, setMentionIndex] = useState(-1)
   const [showSettings, setShowSettings] = useState(false)
+  const [socketError, setSocketError] = useState('')
   const fileInput = useRef(null)
   const messagesEnd = useRef(null)
   const typingTimer = useRef(null)
@@ -97,6 +98,11 @@ export default function CommunityChat({ communityId, onBack }) {
       socket.on('community_updated', (data) => {
         setCommunity((prev) => prev ? { ...prev, ...data } : prev)
       })
+
+      socket.on('error', (data) => {
+        setSocketError(data?.message || 'An error occurred')
+        setTimeout(() => setSocketError(''), 5000)
+      })
     }
 
     return () => {
@@ -106,6 +112,7 @@ export default function CommunityChat({ communityId, onBack }) {
         socket.off('user_typing')
         socket.off('user_stopped_typing')
         socket.off('community_updated')
+        socket.off('error')
       }
     }
   }, [communityId, socket, loadCommunity, fetchMessages, fetchMembers])
@@ -308,6 +315,9 @@ export default function CommunityChat({ communityId, onBack }) {
         </button>
       </header>
 
+      {socketError && (
+        <div className="chat-error-banner">{socketError}</div>
+      )}
       <div className="messages-area">
         {messages.length === 0 ? (
           <p className="placeholder-text">No messages yet. Start the conversation!</p>

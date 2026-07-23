@@ -147,7 +147,7 @@ function AppContent() {
       case 'admin':
         return <AdminDashboard onBack={() => navigate('settings')} />
       case 'profile':
-        return <ProfilePage onBack={() => navigate('home')} username={profileUsername} onViewPost={viewPost} />
+        return <ProfilePage onBack={() => navigate('home')} username={profileUsername} onViewPost={viewPost} onViewProfile={viewProfile} />
       case 'view-post':
         return <PostDetail postId={postId} onBack={() => navigate('home')} />
       case 'search':
